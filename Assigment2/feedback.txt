@@ -1,0 +1,201 @@
+*** Submission ***
+
++ No significant packaging/building issues.
+
++ No significant compiler warnings or style hints from OnlineTA. Good!
+
++ You have listings of your code as an appendix in the report. Good!
+
++ You have included a timesheet. Good!
+
+*** Warmup ***
+
++ All our tests pass. Good job!
+
++ Code looks OK.
+
+  = In defining the Monad instance for RWSE, and the RWSE-specific
+    operations, consider how you could exploit that `(Either ErrorData)`
+    is itself a monad, to write the RWSE components more generically,
+    e.g., as
+      `return a = RWSE (\r s -> return (a, mempty, s))`
+    instead of
+      `return a = RWSE (\r s -> Right (a, mempty, s))`.
+    Similarly, in `>>=`, you have a code fragment of the form
+      `case <exp1> of Left e -> Left e; Right p -> <exp2>`
+    which could have been written as simply
+      `do p <- <exp1>; <exp2>`.
+
+    That way, if we were to replace, e.g., `Either ErrorData` with
+    `Maybe` in RWSE, your definitions of the monad components would
+    still work without change.
+
+  = Note that `let` bindings don't need to be nested. You can simply write:
+    ```
+    let (a, w1, s1) = runRWSP m r0 s0
+        (b, w2, s2) = runRWSP (f a) r0 s1
+    in  (b, w1 <> w2 , s2)
+    ```
+    Your code is not wrong, of course, but this is more readable.
+
+*** Main task: code ***
+
++ Comp monad instance (return, >>=): mostly fine.
+
+  - One glaring issue is that you run `runComp m env` twice! This is not
+    good. If it was an expensive computation, you would be running it
+    twice for no good reason.
+    Instead of first ignoring the second value and then ignoring the
+    first one, like you do:
+    ```
+    (Right a, _) ->  
+      let (_, s1) = runComp m env
+    ```
+    Consider simply doing:
+    ```
+    (Right a, s1) ->  
+    ```
+
++ Comp monad operations (abort, look, withBinding, output): fine.
+
+  + And you are only using those operations in the rest of the program
+    (except for a permitted runComp in `execute`, to finally get out
+    of the monad). Very good! If the definition of Comp were to
+    change, you'll only need to update the definitions here, not in
+    other parts of your code.
+
+- Auxiliary functions (truthy, operate, apply): major problems
+
+  - `truthy` uses guards when it could easily use pattern matching. You
+    should have learned this in the first assignment (and you clearly did,
+    because `printHelper` does this correctly!)
+
+  = `operate` is fine, but you might want to give error messages
+    that are more informative than simply "error".
+
+  + `apply "print"` is fine, even if your code is a little complicated.
+    Separating the logic into auxiliary functions is good, so well done!
+
+  - `apply "range"` has some big issues. It works fine according to our
+    tests, but:
+
+    - You are wrapping and unwrapping integers into `IntVal`s several
+      times. That makes your code harder to follow.
+
+    - You should never ever use `isRight` and `getRight` like that! This
+      gets rid of Haskell's type safety. Use pattern matching (`case`
+      expressions) instead. You cannot guarantee that your code doesn't
+      crash out with some other example case we did not test.
+
+    - `do` blocks with curly braces are unnecessary. Instead of:
+      ```
+      do 
+      {
+        output (printF x)
+        ;return NoneVal
+      }
+      ```
+      You can simply write:
+      ```
+      do
+        output (printF x)
+        return NoneVal
+      ```
+
+    - `wrapComp` is a very hacky and roundabout way of turning a `Value`
+      into a `Comp Value`. You should have used `return` instead
+      (that's exactly what `return` is for, in every monad!), and
+      the fact that you didn't suggests that you do not understand
+      the `Monad` interface.
+
+- Main interpreter functions (eval, exec, execute): major problems
+
+  - Your `eval` cannot really handle Boa comprehensions at all. That
+    was a major part of the assignment, and one of the main places
+    where the monadic structure of the interpreter comes into play.
+    You should probably have spent more time on this, than on some of
+    the other parts.
+
+  - Your code here has mostly the same style and robustness issues as
+    the previous parts, so see the comments above.
+
+  + It is good that you left your commented out attempts in! It helps
+    us have an idea of what you attempted. Next time, you can also
+    comment on them in the report.
+
+*** Main task: testing ***
+
++ Tests are automated and runnable by `stack test`. Good!
+
+  - Inadequate coverage of main required functionality.
+
+    - You spend a lot of testing space on the operators, and not
+      enough on the trickier parts of the assignment (range,
+      list comprehensions...)
+
+      In particular, it's totally fine to have tests that your
+      code does not pass. Certainly better than no tests at all
+      about comprehensions.
+
+  - Your tests have very uninformative names, so it's hard to find
+    what you did and didn't test.
+
+  + It's good that you have negative tests (that is, tests where
+    the expected output is an error).
+
+*** Main task: report ***
+
+  = Rather minimal overview of main design/implementation choices.
+
+    = At least a brief discussion of how you implemented both the
+      `range` and `print` functionality of `apply` would have been
+      appropriate.
+      Simply saying "we used a helper function" is not enough of
+      an explanation.
+
+    - You say very little about how you implemented (or your ideas for
+      implementing) comprehensions in `eval`. That's one of the key
+      design/implementation choices you need to make in this
+      assignment, and you were specifically asked to discuss it in the
+      report.
+
+  = Somewhat minimal and superficial assessment, with no clear
+    explanation of testing strategy and results.
+
+    + You have divided the assessment up into the suggested
+      categories. Good!
+
+  + Completeness: fine
+
+    = You didn't implement everything, but at least it's clear from
+      your report what you did and didn't do,
+
+      = Your ideas for the missing parts are generally very vague;
+        try to be a bit more concrete.
+
+  - Correctness: problems
+
+    - You cannot use OnlineTA as a reason for your correctness assessment.
+      It's a helper tool, not a substitute for a test suite. You will
+      not have OnlineTA in the exam!
+
+  + Efficiency: fine
+
+    + Your code seems to be largely as efficient as one could expect.
+
+  - Robustness: problems
+
+    - Your code uses `undefined` in several places, which breaks
+      Haskell's promise of type safety.
+
+    - This was the point to mention monadic abstractions.
+
+  + Maintainability: fine
+
+*** Overall score: 1 / 6 ***
+
+Your submission has some major issues and cannot get a passing
+grade, especially considering your lack of an implementation
+of list comprehensions.
+Check the issues marked with a "-" above. I hope they will
+help you during your next assignments.
