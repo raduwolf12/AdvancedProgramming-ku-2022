@@ -1,0 +1,7 @@
+Test suite my-test-suite: RUNNING...
+my-test-suite.exe: Prelude.undefined
+CallStack (from HasCallStack):
+  error, called at libraries\base\GHC\Err.hs:75:14 in base:GHC.Err
+  undefined, called at src\Arithmetic.hs:32:14 in arithmetic-0.0.0-inplace:Arithmetic
+Test suite my-test-suite: FAIL
+Test suite logged to: E:\Master\AP\Assigment1\part2\dist-newstyle\build\x86_64-windows\ghc-9.0.1\arithmetic-0.0.0\t\my-test-suite\test\arithmetic-0.0.0-my-test-suite.log
