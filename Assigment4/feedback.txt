@@ -1,0 +1,67 @@
+Submission:
+===========
+
+  + No packaging/building issues.
+
+  + No significant compiler warnings or style hints from OnlineTA.
+
+    = But take a close look at them; they are mostly very sensible.
+
+  - Your report document should be called exactly `report.pdf`, as
+    specified in the assignment text and submission instructions.
+
+  - Your KU-ID should be visible in the report.
+
+  - Please remember to include listings of your code as an appendix in
+    the report.
+
+Emoji - code:
+
+  + Warmup: fine
+
+    - Your `wait` is extremely slow because it runs in a loop instead of
+      sleeping while waiting for receiving the result. The latter would not
+      take up CPU hours because of intelligent engineering of the Erlang
+      runtime. In conclusion, it is better for the server to store a list of
+      waiting processes and contact them when the computation has completed.
+
+  - General style issues: some problems.
+
+    - Problem: You have essentially no separation of concerns in your
+      code. The code for the communication part and the "business
+      logic" is all tangled together. Try to split the looping
+      function into two functions a `handle` function that's purely
+      functional and a `loop` that only manage the communication part.
+
+    - You use a list where a map would be a more appropriate data
+      structure.
+
+  - I think the reason that you get timeouts is that you have not implemented
+    the most important command, namely `lookup`.
+
+Emoji - Testing:
+
+  - No tests at all (other than the default ones). That's not
+    acceptable: merely passing (most or all) the OnlineTA tests is not a
+    substitute for doing and documenting your own tests, and in
+    particular, there will _not_ be an OnlineTA for the final exam
+    (except perhaps for a rudimentary version checking that your code
+    builds and runs on a trivial example).
+
+Emoji server - Report:
+
+  = Rather minimal overview of main design/implementation choices.
+
+    - You have not explained how many processes your solution uses
+
+  - No real assessment or summary of testing results.
+
+  - You say that you have $O(n^2)$ memory efficiency. First of all, what $n$ is
+    not explained. I suppose it is the number of emojis. If so, then where does
+    this exponent $2$ come from?
+
+Overall score: 1 / 6
+
+Because large parts of the core functionality (lookups, analytics functions)
+and testing is not done, I have to fail you without resubmission. Best of luck
+with the assignments to come. Max.
