@@ -1,0 +1,48 @@
+Submission:
+===========
+
+  + No packaging/building issues.
+
+  + No significant compiler warnings or style hints from OnlineTA.
+
+    = But take a close look at them; they are mostly very sensible.
+
+  - You have no report.
+
+
+Let It Be - Code
+================
+
++ General style issues: fine
+
+= Generators: OK, but with a few problems
+
+    - You are using random strings as variables. As such this is
+      correct, however it is unlikely that you'll generate interesting
+      expressions because the space of possible variable a too
+      big. Try to constrain variable be a one lower-case letter, for
+      instance, or one of x, y or z.
+      
+    + Your expression generator is clearly written an easy to
+      understand.
+      
+- Properties: problems
+
+    - You should not outcomment failing properties, but rather state why they
+      fail.
+
+- You have not fixed the mistake in the simplifier, or implemented the
+  extensions.
+  The purpose was to use qc to find the mistake, and then fix it :)
+
+
+Mystery - code
+==============
+
+- It looks like you did not implement this part.
+
+
+Overall score: 0 / 6
+  I am afraid this assignment cannot be passed. If you need some help
+  understanding the assignment or quickcheck, ask your TA in the TA session
+  after the break :)
