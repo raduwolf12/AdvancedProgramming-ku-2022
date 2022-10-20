@@ -1,0 +1,309 @@
+-- Skeleton file for Boa Parser.
+
+module BoaParser (ParseError, parseString) where
+
+import BoaAST
+import Text.ParserCombinators.ReadP as RP
+import Data.Char
+import Control.Applicative
+-- add any other other imports you need
+-- must have whitespaces after not/for-in/if
+
+data ParseError = ParseError String deriving (Eq, Show)
+
+reserveWord :: [String]
+reserveWord = ["None", "True", "False", "for", "if", "in", "not"]
+
+lexeme :: ReadP a -> ReadP a
+lexeme p = do skipSpaces
+		;a <- p
+		;skipSpaces
+		;return a
+
+
+delCom :: ReadP a -> ReadP a
+delCom p = do skipSpaces
+		;skipMany pComment
+		;a <- p
+		;skipSpaces
+		;skipMany pComment
+		;return a
+
+exp2Stmt :: Exp -> Stmt
+exp2Stmt e = (SExp e)
+
+ident2Name :: Exp -> VName
+ident2Name (Var v) = v
+
+exp2Val :: Exp -> Value
+exp2Val (BoaAST.Const x) = x
+
+pProgram :: ReadP Program
+pProgram = pStmts
+
+pStmts :: ReadP [Stmt]
+pStmts = (do 
+	s <- delCom pStmt
+	;_ <- lexeme (string ";")
+	;ss <- delCom pStmts
+	;return (s:ss))
+	<++ (do
+		s <- delCom pStmt
+		;return [s])
+
+pStmt :: ReadP Stmt
+pStmt = (do
+	ident <- lexeme pIdent
+	;_ <- lexeme (string "=")
+	;x <- lexeme pExp
+	;return (SDef (ident2Name ident) x))
+	<++ lexeme (fmap exp2Stmt pExp)
+
+pNone :: ReadP Exp
+pNone = do 
+	_ <- lexeme (string "None")
+	;return (BoaAST.Const NoneVal)
+
+pTrue :: ReadP Exp
+pTrue = do
+	_ <- lexeme (string "True")
+	;return (BoaAST.Const TrueVal)
+
+pFalse :: ReadP Exp
+pFalse = do
+	_ <- lexeme (string "False")
+	;return (BoaAST.Const FalseVal)
+
+pNot :: ReadP Exp
+pNot = do
+	_ <- lexeme (string "not ")
+	;e <- pExp
+	;return (Not e)
+
+
+pExp :: ReadP Exp
+pExp = pNot
+	<++ op0
+
+op0 :: ReadP Exp
+op0 = (do
+	e1 <- op1
+	;_ <- lexeme (string "==")
+	;e2 <- op1
+	;return (Oper Eq e1 e2))
+	<++ (do
+		e1 <- op1
+		;_ <- lexeme (string "!=")
+		;e2 <- op1
+		;return (Not (Oper Eq e1 e2))
+		)
+	<++ (do
+		e1 <- op1
+		;_ <- lexeme (string "<")
+		;e2 <- op1
+		;return (Oper Less e1 e2)
+		)
+	<++ (do
+		e1 <- op1
+		;_ <- lexeme (string ">")
+		;e2 <- op1
+		;return (Oper Greater e1 e2)
+		)
+	<++ (do
+		e1 <- op1
+		;_ <- lexeme (string "<=")
+		;e2 <- op1
+		;return (Not (Oper Greater e1 e2))
+		)
+	<++ (do
+		e1 <- op1
+		;_ <- lexeme (string ">=")
+		;e2 <- op1
+		;return (Not (Oper Less e1 e2))
+		)
+	<++ (do 
+		e1 <- op1
+		;_ <- lexeme (string "in ")
+		;e2 <- op1
+		;return (Oper In e1 e2))
+	<++ (do
+		e1 <- op1
+		;_ <- lexeme (string "not ")
+		;_ <- lexeme (string "in ")
+		;e2 <- op1
+		;return (Not (Oper In e1 e2)))
+	<++ op1
+
+op1 :: ReadP Exp
+op1 = (do
+	e <- op2
+	;op1' e)
+	<++ op2
+
+op1' :: Exp -> ReadP Exp
+op1' x = (do
+	_ <- lexeme (string "+")
+	;e <- op2
+	;op1' (Oper Plus x e))
+	<++ (do
+		_ <- lexeme (string "-")
+		;e <- op2
+		;op1' (Oper Minus x e))
+	<++ return x
+
+op2 :: ReadP Exp
+op2 = (do
+	e <- op3
+	;op2' e)
+	<++ op3
+
+op2' :: Exp -> ReadP Exp
+op2' x = (do
+	_ <- lexeme (string "*")
+	;e <- op3
+	;op2' (Oper Times x e))
+	<++ (do
+		_ <- lexeme (string "//")
+		;e <- op3
+		;op2' (Oper Div x e))
+	<++ (do
+		_ <- lexeme (string "%")
+		;e <- op3
+		;op2' (Oper Mod x e))
+	<++ return x
+
+op3 :: ReadP Exp
+op3 = (do
+		_ <- lexeme (string "[")
+		;ez <- pExpz
+		;_ <- lexeme (string "]")
+		;return (List ez)
+		)
+	<++ (do
+		f <- lexeme pIdent
+		;_ <- lexeme (string "(")
+		;ez <- pExpz
+		;_ <- lexeme (string ")")
+		;return (Call (ident2Name f) ez)
+		)
+	<++ (do 
+		_ <- lexeme (string "[")
+		;e <- pExp
+		;f <- pFor
+		;c <- pClausez
+		;_ <- lexeme (string "]")
+		;return (Compr e (f:c))
+		)
+	<++ (do
+		_ <- lexeme (string "(")
+		;e <- pExp
+		;_ <- lexeme (string ")")
+		;return e)
+	<++ pNumConst
+	<++ pStringConst
+	<++ pNone
+	<++ pTrue
+	<++ pFalse
+	<++ pIdent
+
+pExps :: ReadP [Exp]
+pExps = (do
+	e <- pExp
+	;_ <- lexeme (char ',')
+	;es <- pExps
+	;return (e:es))
+	<++ (do
+		e <- pExp
+		;return [e])
+
+pExpz :: ReadP [Exp]
+pExpz = pExps
+	<++ (do return [])
+
+
+pFor :: ReadP CClause
+pFor = do
+	_ <- lexeme (string "for ")
+	;ident <- lexeme pIdent
+	;_ <- lexeme (string "in ")
+	;exp <- pExp
+	;return (CCFor (ident2Name ident) exp)
+
+pIf :: ReadP CClause
+pIf = do
+	_ <- lexeme (string "if ")
+	;exp <- pExp
+	;return (CCIf exp)
+
+pClausez :: ReadP [CClause]
+pClausez = (do 
+		c <- lexeme pFor
+		;cs <- pClausez
+		;return (c:cs))
+	<++ (do
+		c <- lexeme pIf
+		;cs <- pClausez
+		;return (c:cs))
+	<++ (do return [])  -- ?
+
+
+pIdent :: ReadP Exp
+pIdent = lexeme $ do
+	x <- satisfy (\c-> isLetter c || c == '_')
+	;xs <- munch (\c -> isLetter c || isDigit c || c == '_')
+	;let ident = x:xs
+	;if ident `notElem` reserveWord
+		then return (Var ident)
+	else
+		fail "Use reserved word as an identifier."
+
+pNumConst :: ReadP Exp
+pNumConst = do
+	x <- option ' ' (char '-')
+	;xs <- munch1 isDigit
+	;if (head xs == '0') && (length xs > 1)
+		then fail "Num Error"
+	else return (BoaAST.Const (IntVal (read (x:xs)::Int)))
+
+pStringConst :: ReadP Exp
+pStringConst = do
+	_ <- char '\''
+	;content <- RP.many (
+		satisfy (\x -> isPrint x && x /= '\'' && x /= '\\')
+		<|> (do _ <- string "\\'"; return ('\''))
+		<|> (do _ <- string "\\\\"; return ('\\'))
+		<|> (do _ <- string "\\n"; return ('\n'))
+		<|> (do _ <- string "\\\n"; return ('\0'))
+		)
+	;_ <- char '\''
+	;let c = [x | x <- content, x `notElem` "\NUL"]
+	;return (BoaAST.Const (StringVal c))
+
+
+pComment :: ReadP String
+pComment = (do
+	_ <- string "#"
+	; s <- munch (\x -> x /= '\n')
+	; _ <- string "\n"
+	;return s
+	)
+
+
+--parseString :: String -> Either ParseError Program
+--parseString s = if (readP_to_S pProgram s == [])
+--	then
+--		Left (ParseError "Parse Failed.")
+--	else (do
+--		let tmp = [x | x <- readP_to_S pProgram s, snd x == ""]
+--		;if tmp == []
+--			then 
+--				Left (ParseError "Parse Failed.")
+--			else 
+--				Right (fst (head tmp))
+				
+--		)
+parseString :: String -> Either ParseError Program
+parseString s = case readP_to_S (do skipSpaces; a <- pProgram; eof; return a) s of
+  [] -> Left (ParseError "cannot parse")
+  [(a,_)] -> Right a
+  _ -> error "Error"
